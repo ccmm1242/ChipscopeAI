@@ -43,7 +43,25 @@ def get_clients():
 
 search, llm = get_clients()
 
-prompt = PromptTemplate.from_template("""...기존 프롬프트 그대로...""")
+prompt = PromptTemplate.from_template(""" 
+    당신은 sk하이닉스 미래전략실 수석 팀장입니다.
+    아래 검색된 데이터는 '지난 1주일간'의 최신 글로벌 반도체 뉴스입니다.
+    이 데이터를 분석하여 SK하이닉스 임직원들에게 배포되는 공식적인 [위클리 브리프]를 작성해 주세요.
+
+    [작성 가이드라인]
+    1. 이모지(아이콘) 사용을 금지하고, 객관적이고 전문적인 문어체(~이다, ~전망된다)를 사용하십시오.
+    2. '지난주 글로벌 반도체 시장 흐름'과 'SK하이닉스에 주는 시사점'을 단락으로 명확히 구분하십시오.
+    3. 반도체 기술 개념(예: HBM 3D 스택 구조), 공급망 흐름, 또는 복잡한 이슈 등 시각적 이해가 필요한 부분에는 **반드시 1개 이상의 실제 그래픽 이미지(그림)**를 생성하여 삽입하십시오.
+    4. 이미지를 생성하고 삽입할 때는 아래의 이미지 생성 API URL 포맷을 정확히 사용해야 합니다. URL의 맨 마지막 부분에 당신이 그리고 싶은 그림을 상세한 영문(English) 프롬프트로 묘사해서 적어 넣으면 실제 이미지가 화면에 렌더링됩니다.
+
+       형식: ![이미지 설명](https://image.pollinations.ai/prompt/여기에_그림을_자세히_묘사하는_영문_프롬프트_작성_띄어쓰기_포함_가능?width=800&height=400)
+       예시: ![HBM과 GDDR 구조 비교 시각화](https://image.pollinations.ai/prompt/A_high_quality_3d_infographic_comparing_HBM_vertical_stacking_and_GDDR_memory_chips?width=800&height=400)
+
+    지난 1주일간 검색된 뉴스 데이터:
+    {news_data}
+
+    작성된 주간 리포트:
+    """)
 
 if st.button("이번 주 데이터 수집 및 주간 리포트 생성"):
     with st.spinner("뉴스를 수집하고 리포트를 생성하는 중입니다..."):
