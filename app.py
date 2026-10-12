@@ -6,6 +6,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.prompts import PromptTemplate
 
+st.write("DEBUG - GOOGLE_API_KEY 존재 여부:", "GOOGLE_API_KEY" in st.secrets)
+st.write("DEBUG - TAVILY_API_KEY 존재 여부:", "TAVILY_API_KEY" in st.secrets)
+
+if "GOOGLE_API_KEY" in st.secrets:
+    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+if "TAVILY_API_KEY" in st.secrets:
+    os.environ["TAVILY_API_KEY"] = st.secrets["TAVILY_API_KEY"]
+    
 # n월n주차함수
 def get_week_info():
     now = datetime.now()
