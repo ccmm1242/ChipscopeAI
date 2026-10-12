@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import ast
-from datetime import datetime
+from datetime import datetime, timedelta
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.prompts import PromptTemplate
