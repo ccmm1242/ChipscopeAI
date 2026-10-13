@@ -2,8 +2,55 @@ import streamlit as st
 import os
 from datetime import datetime, timedelta
 
-# 1. 묻지도 따지지도 않고 화면부터 강제로 띄우기
-st.set_page_config(page_title="글로벌 반도체 주간 동향 분석", page_icon="📄", layout="wide")
+# 1. 페이지 기본 설정 및 탭 이름 변경
+st.set_page_config(page_title="SK Hynix Weekly Tech Brief", page_icon="🔴", layout="wide")
+
+# 🎨 2. 커스텀 CSS (디자인 스킨 입히기)
+st.markdown("""
+<style>
+    /* 전체 배경은 깔끔한 하얀색 */
+    .stApp {
+        background-color: #FFFFFF;
+    }
+    
+    /* 헤더 및 포인트 컬러 설정 (SK하이닉스 레드: #E0002A) */
+    .highlight-red {
+        color: #E0002A;
+        font-weight: bold;
+    }
+    
+    /* 리포트 카드 디자인 */
+    .report-card {
+        background-color: #F8F9FA;
+        border-left: 5px solid #E0002A;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    /* 버튼 디자인 세련되게 변경 */
+    div.stButton > button:first-child {
+        background-color: #E0002A;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #C00020;
+        box-shadow: 0 4px 10px rgba(224, 0, 42, 0.3);
+    }
+
+    /* 경계선 스타일 */
+    hr {
+        border-top: 1px solid #EAEAEA;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # '지난주 월요일'을 기준으로 n월 n주차를 계산하는 함수
 def get_week_info():
@@ -16,106 +63,117 @@ def get_week_info():
 
 week_info = get_week_info()
 
-# 헤더 디자인 
-st.markdown(f"""
-<div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-    <h1 style="color: #333; margin-bottom: 0;">반도체 위클리 브리프 ({week_info})</h1>
-    <p style="color: #666; font-size: 14px; margin-top: 5px;">SK Hynix Tech & Trend Scout | 매주 월요일 아침 발행</p>
-</div>
-""", unsafe_allow_html=True)
+# 📝 3. 세련된 헤더(Header) 영역
+col1, col2 = st.columns([1, 4])
+with col1:
+    # (선택) 여기에 실제 로고 이미지 URL을 넣으면 더 완벽해집니다!
+    st.markdown("<h1 style='color:#E0002A; font-size: 40px; margin-bottom:0;'>SK</h1>", unsafe_allow_html=True)
+with col2:
+    st.markdown(f"""
+    <div style="margin-top: 10px;">
+        <h2 style="color: #333; margin-bottom: 0;">Weekly Tech Brief <span style="color:#888; font-size:20px;">| {week_info}</span></h2>
+        <p style="color: #666; font-size: 14px; margin-top: 5px;">AI가 분석하는 글로벌 반도체 기술 동향 및 시사점</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# 2. [가장 중요] API 키 상태를 화면에 적나라하게 보여주기
-st.markdown("### 🚨 현재 시스템 상태 점검 (디버깅)")
+st.markdown("<hr>", unsafe_allow_html=True)
 
-has_google_key = "GOOGLE_API_KEY" in st.secrets
-has_tavily_key = "TAVILY_API_KEY" in st.secrets
+# 🔑 4. API 키 가져오기 (오류 방지용 검증 포함)
+if "GOOGLE_API_KEY" in st.secrets:
+    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+if "TAVILY_API_KEY" in st.secrets:
+    os.environ["TAVILY_API_KEY"] = st.secrets["TAVILY_API_KEY"]
 
-st.write(f"1. Streamlit Secrets(금고)에 구글 키가 등록되어 있나요? 👉 **{has_google_key}**")
-st.write(f"2. Streamlit Secrets(금고)에 타빌리 키가 등록되어 있나요? 👉 **{has_tavily_key}**")
-
-if not has_google_key or not has_tavily_key:
-    st.error("""
-    **⛔ 오류: API 키가 금고(Secrets)에 없습니다!**
-    
-    웹사이트는 정상적으로 켜졌지만, Streamlit Cloud의 [Settings] -> [Secrets] 창에 API 키가 설정되어 있지 않아 멈췄습니다. 
-    아래 형식을 참고하여 Secrets 창에 키를 꼭 입력해 주세요.
-    
-    ```toml
-    GOOGLE_API_KEY = "본인의_제미나이_키_입력"
-    TAVILY_API_KEY = "본인의_타빌리_키_입력"
-    ```
-    """)
-    st.stop() # 키가 없으면 더 이상 진행하지 않고 안전하게 멈춤
-
-# 3. 키가 있다면 안전하게 꺼내오기
-os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
-os.environ["TAVILY_API_KEY"] = st.secrets["TAVILY_API_KEY"]
-
-st.success("✅ 모든 API 키가 정상적으로 확인되었습니다! 아래 버튼을 눌러보세요.")
-
-# 4. 안전하게 지연 로딩하는 AI 모듈 (앱 켜질 때 충돌 방지)
+# 앱 실행 전 라이브러리 검증
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_community.tools.tavily_search import TavilySearchResults
     from langchain_core.prompts import PromptTemplate
 except Exception as e:
-    st.error(f"모듈 로딩 중 에러 발생: {e}")
+    st.error("시스템 로딩 오류. 잠시 후 다시 시도해 주세요.")
     st.stop()
 
-# 5. 실행 버튼 구조
-if st.button("이번 주 데이터 수집 및 주간 리포트 생성"):
-    with st.spinner("지난 1주일간의 뉴스를 수집하고 시각 자료(이미지)를 생성하는 중입니다... (약 15~30초 소요)"):
-        try:
-            search = TavilySearchResults(max_results=5) 
-            llm = ChatGoogleGenerativeAI(model="gemini-3.8-flash")
+# 🚀 5. 데이터 분석 및 출력 섹션
+# 레이아웃을 칼럼(단)으로 나누어 가독성을 높입니다.
+left_col, right_col = st.columns([2, 1])
 
-            prompt = PromptTemplate.from_template(
-                """
-                당신은 증권사 수석 연구원이자 반도체 산업 전문 애널리스트입니다.
-                아래 검색된 데이터는 '지난 1주일간'의 최신 글로벌 반도체 뉴스입니다. 
-                이 데이터를 분석하여 SK하이닉스 임직원들에게 배포되는 공식적인 [반도체 위클리 브리프]를 작성해 주세요.
-                
-                [작성 가이드라인]
-                1. 이모지(아이콘) 사용을 금지하고, 객관적이고 전문적인 문어체(~이다, ~전망된다)를 사용하십시오.
-                2. '지난주 글로벌 반도체 시장 흐름'과 'SK하이닉스에 주는 시사점'을 단락으로 명확히 구분하십시오.
-                3. 반도체 기술 개념(예: HBM 3D 스택 구조), 공급망 흐름, 또는 복잡한 이슈 등 시각적 이해가 필요한 부분에는 반드시 1개 이상의 실제 그래픽 이미지(그림)를 생성하여 삽입하십시오.
-                4. 이미지를 생성하고 삽입할 때는 아래의 이미지 생성 API URL 포맷을 정확히 사용해야 합니다. URL의 맨 마지막 부분에 당신이 그리고 싶은 그림을 상세한 영문(English) 프롬프트로 묘사해서 적어 넣으면 실제 이미지가 화면에 렌더링됩니다.
-                   
-                   형식: ![이미지 설명](https://image.pollinations.ai/prompt/여기에_그림을_자세히_묘사하는_영문_프롬프트_작성_띄어쓰기_포함_가능?width=800&height=400)
-                   예시: ![HBM과 GDDR 구조 비교 시각화](https://image.pollinations.ai/prompt/A_high_quality_3d_infographic_comparing_HBM_vertical_stacking_and_GDDR_memory_chips?width=800&height=400)
-                
-                지난 1주일간 검색된 뉴스 데이터:
-                {news_data}
-                
-                작성된 주간 리포트:
-                """
-            )
+with left_col:
+    st.markdown("### 📊 글로벌 마켓 & 인사이트 분석")
+    st.caption("클릭 시 AI가 최근 7일간의 글로벌 반도체 기사를 수집하여 리포트를 작성합니다.")
+    
+    if st.button("이번 주 브리프 생성하기"):
+        if not os.environ.get("GOOGLE_API_KEY") or not os.environ.get("TAVILY_API_KEY"):
+            st.error("🚨 환경 설정(API 키) 오류. 시스템 관리자에게 문의하세요.")
+            st.stop()
+            
+        with st.spinner("AI가 전 세계 뉴스를 실시간으로 분석하고 있습니다... (약 20초 소요)"):
+            try:
+                search = TavilySearchResults(max_results=5) 
+                llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
 
-            kr_results = search.invoke("지난 1주일 글로벌 반도체 최신 동향 삼성전자 SK하이닉스 이슈")
-            en_results = search.invoke("Past 7 days semiconductor news Nvidia Intel TSMC trends")
-            combined_news = kr_results + en_results
-            
-            chain = prompt | llm
-            result = chain.invoke({"news_data": combined_news})
-            
-            st.markdown("### 📋 Executive Summary")
-            st.markdown(result.content)
-            
-            st.markdown("<hr style='border: 1px solid #eee;'>", unsafe_allow_html=True)
-            
-            st.markdown("#### 🔗 Reference (지난주 분석 출처)")
-            st.caption("클릭 시 AI가 분석에 활용한 원문 기사로 이동합니다.")
-            
-            for i, news in enumerate(combined_news):
-                # 안전한 딕셔너리 및 객체 속성 처리
-                if isinstance(news, dict):
-                    url = news.get('url', '#')
-                    title = news.get('title', f"Reference Article {i+1}")
-                    st.markdown(f"- [{title}]({url})")
-                else:
-                    url = getattr(news, 'url', '#')
-                    title = getattr(news, 'title', f"Reference Article {i+1}")
-                    st.markdown(f"- [{title}]({url})")
+                # 프롬프트(지시문)도 깔끔한 출력을 위해 개선
+                prompt = PromptTemplate.from_template(
+                    """
+                    당신은 SK하이닉스의 수석 연구원이자 반도체 산업 전문 애널리스트입니다.
+                    아래 검색된 데이터는 '지난 1주일간'의 최신 글로벌 반도체 뉴스입니다. 
+                    
+                    [작성 가이드라인]
+                    1. 이모지(아이콘) 사용 금지, 간결하고 전문적인 문어체(~이다, ~전망된다) 사용.
+                    2. 출력 내용은 마크다운(Markdown) 형식을 사용하여 제목과 본문을 깔끔하게 구분할 것.
+                    3. [1. 주간 글로벌 반도체 시장 흐름]과 [2. SK하이닉스 인사이트 및 시사점]으로 섹션을 나눌 것.
+                    4. 반도체 기술 개념, 공급망 이슈 등 시각적 이해가 필요한 부분(최소 1곳 이상)에는 **반드시 아래 이미지 생성 포맷을 삽입**할 것.
+                       - 포맷: ![이미지 설명](https://image.pollinations.ai/prompt/그림을_묘사하는_상세한_영문_프롬프트?width=800&height=400)
+                    
+                    지난 1주일간 검색된 뉴스 데이터:
+                    {news_data}
+                    
+                    리포트 본문:
+                    """
+                )
 
-        except Exception as e:
-            st.error(f"오류가 발생했습니다: {e}")
+                kr_results = search.invoke("지난 1주일 글로벌 반도체 최신 동향 삼성전자 SK하이닉스 HBM 이슈")
+                en_results = search.invoke("Past 7 days semiconductor news Nvidia Intel TSMC AI trends")
+                combined_news = kr_results + en_results
+                
+                chain = prompt | llm
+                result = chain.invoke({"news_data": combined_news})
+                
+                # 리포트 본문을 커스텀 CSS 박스 안에 예쁘게 출력
+                st.markdown('<div class="report-card">', unsafe_allow_html=True)
+                st.markdown(result.content)
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+                # 참고 문헌 리스트 출력
+                st.markdown("#### 🔗 References (출처 기사)")
+                st.caption("AI가 분석에 활용한 원문 기사 리스트입니다.")
+                for i, news in enumerate(combined_news):
+                    if isinstance(news, dict):
+                        url = news.get('url', '#')
+                        title = news.get('title', f"Reference Article {i+1}")
+                        st.markdown(f"- [{title}]({url})")
+                    else:
+                        url = getattr(news, 'url', '#')
+                        title = getattr(news, 'title', f"Reference Article {i+1}")
+                        st.markdown(f"- [{title}]({url})")
+
+            except Exception as e:
+                st.error("데이터 수집 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+
+with right_col:
+    # 오른쪽 사이드 패널에 프로그램 안내와 부가 정보 배치
+    st.markdown("### 📌 About")
+    st.info(
+        "**[SK Pre-SKALA 프로젝트]**\n\n"
+        "이 웹 서비스는 AI 에이전트(Agent) 기술을 활용하여 흩어져 있는 방대한 반도체 뉴스를 수집하고, "
+        "SK하이닉스 실무진에게 필요한 핵심 인사이트만을 자동으로 요약·추출하기 위해 기획되었습니다."
+    )
+    
+    st.markdown("#### 주요 기능")
+    st.markdown("""
+    - 실시간 글로벌 뉴스 트래킹 (Tavily AI)
+    - 맥락 기반 인사이트 도출 (LLM)
+    - 텍스트 기반 시각화 자동 생성
+    """)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.caption("Developed for SK Hynix Tech & Trend Scout Project")
