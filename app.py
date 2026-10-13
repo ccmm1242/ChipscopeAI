@@ -1,16 +1,9 @@
 import streamlit as st
 import os
-import ast
 from datetime import datetime, timedelta
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_core.prompts import PromptTemplate
 
-# 🛡️ 깃허브 배포 시 안전하게 Streamlit 금고(Secrets)에서 키를 꺼내오도록 설정
-if "GOOGLE_API_KEY" in st.secrets:
-    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
-if "TAVILY_API_KEY" in st.secrets:
-    os.environ["TAVILY_API_KEY"] = st.secrets["TAVILY_API_KEY"]
+# 1. 묻지도 따지지도 않고 화면부터 강제로 띄우기
+st.set_page_config(page_title="글로벌 반도체 주간 동향 분석", page_icon="📄", layout="wide")
 
 # '지난주 월요일'을 기준으로 n월 n주차를 계산하는 함수
 def get_week_info():
@@ -23,10 +16,7 @@ def get_week_info():
 
 week_info = get_week_info()
 
-# 페이지 기본 설정
-st.set_page_config(page_title="글로벌 반도체 주간 동향 분석", page_icon="📄", layout="wide")
-
-# 헤더 디자인 (증권사 리포트 스타일)
+# 헤더 디자인 
 st.markdown(f"""
 <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
     <h1 style="color: #333; margin-bottom: 0;">반도체 위클리 브리프 ({week_info})</h1>
@@ -34,13 +24,46 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 🖱️ [중요] 버튼을 누르기 전에는 절대 AI를 실행하지 않고 여기서 대기합니다.
-if st.button("이번 주 데이터 수집 및 주간 리포트 생성"):
-    # API 키 검증
-    if not os.environ.get("GOOGLE_API_KEY") or not os.environ.get("TAVILY_API_KEY"):
-        st.error("🚨 API 키가 설정되지 않았습니다. Streamlit Cloud의 Secrets 설정을 확인해 주세요.")
-        st.stop()
+# 2. [가장 중요] API 키 상태를 화면에 적나라하게 보여주기
+st.markdown("### 🚨 현재 시스템 상태 점검 (디버깅)")
 
+has_google_key = "GOOGLE_API_KEY" in st.secrets
+has_tavily_key = "TAVILY_API_KEY" in st.secrets
+
+st.write(f"1. Streamlit Secrets(금고)에 구글 키가 등록되어 있나요? 👉 **{has_google_key}**")
+st.write(f"2. Streamlit Secrets(금고)에 타빌리 키가 등록되어 있나요? 👉 **{has_tavily_key}**")
+
+if not has_google_key or not has_tavily_key:
+    st.error("""
+    **⛔ 오류: API 키가 금고(Secrets)에 없습니다!**
+    
+    웹사이트는 정상적으로 켜졌지만, Streamlit Cloud의 [Settings] -> [Secrets] 창에 API 키가 설정되어 있지 않아 멈췄습니다. 
+    아래 형식을 참고하여 Secrets 창에 키를 꼭 입력해 주세요.
+    
+    ```toml
+    GOOGLE_API_KEY = "본인의_제미나이_키_입력"
+    TAVILY_API_KEY = "본인의_타빌리_키_입력"
+    ```
+    """)
+    st.stop() # 키가 없으면 더 이상 진행하지 않고 안전하게 멈춤
+
+# 3. 키가 있다면 안전하게 꺼내오기
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+os.environ["TAVILY_API_KEY"] = st.secrets["TAVILY_API_KEY"]
+
+st.success("✅ 모든 API 키가 정상적으로 확인되었습니다! 아래 버튼을 눌러보세요.")
+
+# 4. 안전하게 지연 로딩하는 AI 모듈 (앱 켜질 때 충돌 방지)
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_community.tools.tavily_search import TavilySearchResults
+    from langchain_core.prompts import PromptTemplate
+except Exception as e:
+    st.error(f"모듈 로딩 중 에러 발생: {e}")
+    st.stop()
+
+# 5. 실행 버튼 구조
+if st.button("이번 주 데이터 수집 및 주간 리포트 생성"):
     with st.spinner("지난 1주일간의 뉴스를 수집하고 시각 자료(이미지)를 생성하는 중입니다... (약 15~30초 소요)"):
         try:
             search = TavilySearchResults(max_results=5) 
@@ -48,7 +71,7 @@ if st.button("이번 주 데이터 수집 및 주간 리포트 생성"):
 
             prompt = PromptTemplate.from_template(
                 """
-                당신은 SK하이닉스 미래전략실 팀장입니다.
+                당신은 증권사 수석 연구원이자 반도체 산업 전문 애널리스트입니다.
                 아래 검색된 데이터는 '지난 1주일간'의 최신 글로벌 반도체 뉴스입니다. 
                 이 데이터를 분석하여 SK하이닉스 임직원들에게 배포되는 공식적인 [반도체 위클리 브리프]를 작성해 주세요.
                 
@@ -84,12 +107,13 @@ if st.button("이번 주 데이터 수집 및 주간 리포트 생성"):
             st.caption("클릭 시 AI가 분석에 활용한 원문 기사로 이동합니다.")
             
             for i, news in enumerate(combined_news):
-                if isinstance(news, dict) and 'url' in news:
-                    url = news['url']
+                # 안전한 딕셔너리 및 객체 속성 처리
+                if isinstance(news, dict):
+                    url = news.get('url', '#')
                     title = news.get('title', f"Reference Article {i+1}")
                     st.markdown(f"- [{title}]({url})")
-                elif hasattr(news, 'url'):
-                    url = getattr(news, 'url')
+                else:
+                    url = getattr(news, 'url', '#')
                     title = getattr(news, 'title', f"Reference Article {i+1}")
                     st.markdown(f"- [{title}]({url})")
 
