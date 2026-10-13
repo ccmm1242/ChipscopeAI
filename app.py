@@ -67,7 +67,7 @@ if st.button("이번 주 데이터 수집 및 주간 리포트 생성"):
     with st.spinner("지난 1주일간의 뉴스를 수집하고 시각 자료(이미지)를 생성하는 중입니다... (약 15~30초 소요)"):
         try:
             search = TavilySearchResults(max_results=5) 
-            llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+            llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
 
             prompt = PromptTemplate.from_template(
                 """
