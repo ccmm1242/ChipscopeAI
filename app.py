@@ -140,7 +140,7 @@ with left_col:
             with st.spinner(f"AI가 {selected_week} 기준 뉴스를 수집하고 리포트를 작성 중입니다... (약 20초)"):
                 try:
                     search = TavilySearchResults(max_results=5)
-                    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash") # 최신 안정 버전으로 권장
+                    llm = ChatGoogleGenerativeAI(model="gemini-3.8-flash") # 최신 안정 버전으로 권장
                     
                     prompt = PromptTemplate.from_template(
                         """
