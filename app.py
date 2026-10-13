@@ -81,7 +81,7 @@ with left_col:
                 
                 # [디버깅] 2단계: Gemini API 테스트 (구형 모델명 에러 방지를 위해 gemini-1.5-pro 사용)
                 st.write("진행 상황 2: Gemini 모델 준비 중...")
-                llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+                llm = ChatGoogleGenerativeAI(model="gemini-3.8-flash")
                 
                 prompt = PromptTemplate.from_template(
                     """
