@@ -163,7 +163,7 @@ with right_col:
     # 오른쪽 사이드 패널에 프로그램 안내와 부가 정보 배치
     st.markdown("### 📌 About")
     st.info(
-        "**[SK Pre-SKALA 프로젝트]**\n\n"
+        "**[Weekly Memory Brief]**\n\n"
         "이 웹 서비스는 AI 에이전트(Agent) 기술을 활용하여 흩어져 있는 방대한 반도체 뉴스를 수집하고, "
         "SK하이닉스 실무진에게 필요한 핵심 인사이트만을 자동으로 요약·추출하기 위해 기획되었습니다."
     )
