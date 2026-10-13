@@ -92,8 +92,8 @@ st.markdown("""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
     <h1 style='color:#E0002A; font-size: 38px; margin:0; margin-right: 15px;'>SK</h1>
     <div>
-        <h2 style="color: #111; margin:0;">Weekly Tech Brief</h2>
-        <p style="color: #666; font-size: 14px; margin-top: 5px;">SK하이닉스 전략기획실 맞춤형 AI 반도체 동향 분석</p>
+        <h2 style="color: #111; margin:0;">Weekly Memory Brief</h2>
+        <p style="color: #666; font-size: 14px; margin-top: 4px;">SK하이닉스 임직원을 위한 주간칼럼</p>
     </div>
 </div>
 <hr style='margin-top:0px; margin-bottom:30px;'>
@@ -118,7 +118,7 @@ left_col, right_col = st.columns([2, 1])
 
 with left_col:
     # 🎯 생성할 주차 선택 옵션
-    st.markdown("### 🛠️ 리포트 강제 생성 (포트폴리오 시연용)")
+    st.markdown("### 🛠️ 칼럼 생성 🛠️")
     
     week_options = {
         "9월 1주차": datetime(2026, 9, 7, 7, 0, 0),
