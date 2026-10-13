@@ -7,23 +7,46 @@ from datetime import datetime, timedelta
 # 1. 페이지 기본 설정
 st.set_page_config(page_title="SK Hynix Weekly Tech Brief", page_icon="🔴", layout="wide")
 
-# 2. 커스텀 CSS (가독성 높은 PDF 리포트 스타일)
+# 2. 커스텀 CSS (증권사 PDF 리포트 스타일 & 가독성 개선)
 st.markdown("""
 <style>
+    /* 전체 배경 화이트, 텍스트 블랙 강제 지정 */
     .stApp { background-color: #FFFFFF; color: #111111; }
+    
+    /* 리포트 본문 컨테이너 스타일 (PDF 느낌) */
     .report-container {
-        background-color: #FFFFFF; border: 1px solid #DDDDDD; border-top: 5px solid #E0002A;
-        padding: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 20px;
+        background-color: #FFFFFF;
+        border: 1px solid #DDDDDD;
+        border-top: 5px solid #E0002A;
+        padding: 30px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
     }
+    
+    /* 리포트 내 제목 스타일 */
     .report-container h1 { color: #E0002A; font-size: 26px; border-bottom: 2px solid #EAEAEA; padding-bottom: 10px; margin-bottom: 20px; }
     .report-container h2 { color: #222222; font-size: 20px; margin-top: 25px; margin-bottom: 15px; }
     .report-container h3 { color: #444444; font-size: 16px; margin-top: 15px; }
     .report-container p, .report-container li { color: #333333; line-height: 1.7; font-size: 15px; }
+    
+    /* 과거 히스토리 박스 스타일 */
     .history-box { background-color: #F8F9FA; padding: 15px; border-radius: 5px; border-left: 3px solid #888888; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 데이터베이스 초기 세팅 및 함수
+# 3. 날짜 계산 함수
+def get_week_info(target_date=None):
+    if target_date is None:
+        target_date = datetime.now()
+    last_monday = target_date - timedelta(days=target_date.weekday() + 7)
+    month = last_monday.month
+    first_day = datetime(last_monday.year, last_monday.month, 1)
+    week_number = (last_monday.day - 1 + first_day.weekday()) // 7 + 1
+    return f"{month}월 {week_number}주차"
+
+current_week_info = get_week_info()
+
+# 4. 데이터베이스(SQLite) 초기 세팅 함수
 def init_db():
     conn = sqlite3.connect('brief_history.db')
     c = conn.cursor()
@@ -37,17 +60,18 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_report_to_db(week_title, content, simulated_date):
+def save_report_to_db(week_title, content):
     conn = sqlite3.connect('brief_history.db')
     c = conn.cursor()
+    # 중복 저장 방지 (같은 주차면 덮어쓰기)
     c.execute("SELECT id FROM reports WHERE week_title=?", (week_title,))
     result = c.fetchone()
     if result:
         c.execute("UPDATE reports SET content=?, created_at=? WHERE week_title=?", 
-                  (content, simulated_date, week_title))
+                  (content, datetime.now(), week_title))
     else:
         c.execute("INSERT INTO reports (week_title, content, created_at) VALUES (?, ?, ?)", 
-                  (week_title, content, simulated_date))
+                  (week_title, content, datetime.now()))
     conn.commit()
     conn.close()
 
@@ -57,19 +81,21 @@ def load_history():
     conn.close()
     return df
 
+# DB 생성 실행
 init_db()
 
-# 4. 헤더 UI
-st.markdown("""
-<div style="display: flex; align-items: center; margin-bottom: 20px;">
-    <h1 style='color:#E0002A; font-size: 38px; margin:0; margin-right: 15px;'>SK</h1>
+# 5. 헤더 UI
+col1, col2 = st.columns([1, 6])
+with col1:
+    st.markdown("<h1 style='color:#E0002A; font-size: 38px; margin:0;'>SK</h1>", unsafe_allow_html=True)
+with col2:
+    st.markdown(f"""
     <div>
-        <h2 style="color: #111; margin:0;">Weekly Tech Brief</h2>
+        <h2 style="color: #111; margin:0;">Weekly Tech Brief <span style="color:#888; font-size:18px; font-weight:normal;">| {current_week_info}</span></h2>
         <p style="color: #666; font-size: 14px; margin-top: 5px;">SK하이닉스 전략기획실 맞춤형 AI 반도체 동향 분석</p>
     </div>
-</div>
-<hr style='margin-top:0px; margin-bottom:30px;'>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+st.markdown("<hr style='margin-top:10px; margin-bottom:30px;'>", unsafe_allow_html=True)
 
 # API 키 세팅
 if "GOOGLE_API_KEY" in st.secrets:
@@ -85,41 +111,24 @@ except Exception as e:
     st.error("시스템 오류가 발생했습니다.")
     st.stop()
 
-# 5. 메인 레이아웃 분할
+# 6. 메인 레이아웃 분할
 left_col, right_col = st.columns([2, 1])
 
+# --- [좌측 칼럼: 리포트 생성 및 메인 뷰어] ---
 with left_col:
-    # 🎯 [핵심 추가 기능] 생성할 주차를 마음대로 선택할 수 있는 옵션
-    st.markdown("### 🛠️ 리포트 강제 생성 (포트폴리오 시연용)")
-    
-    # 9월 1주차 ~ 10월 3주차까지 선택지 제공
-    week_options = {
-        "9월 1주차": datetime(2026, 9, 7, 7, 0, 0), # 가상의 생성 시간 설정
-        "9월 2주차": datetime(2026, 9, 14, 7, 0, 0),
-        "9월 3주차": datetime(2026, 9, 21, 7, 0, 0),
-        "9월 4주차": datetime(2026, 9, 28, 7, 0, 0),
-        "10월 1주차": datetime(2026, 10, 5, 7, 0, 0),
-        "10월 2주차": datetime(2026, 10, 12, 7, 0, 0),
-        "10월 3주차": datetime(2026, 10, 19, 7, 0, 0)
-    }
-    
-    selected_week = st.selectbox("DB에 주입할 브리프 주차를 선택하세요:", list(week_options.keys()), index=5)
-    simulated_date = week_options[selected_week]
-    
-    if st.button(f"🚀 [{selected_week}] 브리프 생성 및 DB 저장", use_container_width=True):
+    if st.button(f"🚀 {current_week_info} 브리프 새로 생성하기", use_container_width=True):
         if not os.environ.get("GOOGLE_API_KEY") or not os.environ.get("TAVILY_API_KEY"):
             st.error("🚨 API 키가 누락되었습니다.")
         else:
-            with st.spinner(f"AI가 {selected_week} 기준 뉴스를 수집하고 리포트를 작성 중입니다... (약 20초)"):
+            with st.spinner("AI가 전 세계 뉴스를 분석하여 리포트를 조판 중입니다... (약 20초)"):
                 try:
                     search = TavilySearchResults(max_results=5)
+                    # 안정적인 모델로 원상복구!
                     llm = ChatGoogleGenerativeAI(model="gemini-3.8-flash")
                     
-                    # 프롬프트에 선택한 주차 정보를 주입하여 과거 시점으로 분석하도록 유도
                     prompt = PromptTemplate.from_template(
                         """
-                        당신은 SK하이닉스 최고 애널리스트입니다. 
-                        현재 시점은 '{target_week}'입니다. 아래 뉴스를 바탕으로 {target_week}의 반도체 시장 흐름 보고서를 작성하세요.
+                        당신은 SK하이닉스 최고 애널리스트입니다. 아래 뉴스를 바탕으로 보고서를 작성하세요.
                         출력 형식은 마크다운(Markdown)을 엄격히 지켜주세요.
                         
                         [보고서 양식 강제 사항]
@@ -137,27 +146,24 @@ with left_col:
                         """
                     )
 
-                    kr_results = search.invoke(f"SK하이닉스 반도체 HBM 최신 동향 {selected_week}")
-                    en_results = search.invoke(f"Semiconductor news Nvidia Intel TSMC trends {selected_week}")
+                    kr_results = search.invoke("SK하이닉스 반도체 HBM 최신 동향")
+                    en_results = search.invoke("Semiconductor news Nvidia Intel TSMC trends")
                     combined_news = kr_results + en_results
                     
                     chain = prompt | llm
-                    result = chain.invoke({
-                        "news_data": combined_news,
-                        "target_week": selected_week
-                    })
+                    result = chain.invoke({"news_data": combined_news})
                     
-                    # 🎯 DB에 저장할 때 실제 시간이 아닌 '가짜 과거 시간(simulated_date)'으로 강제 저장
-                    save_report_to_db(selected_week, result.content, simulated_date)
+                    # DB에 결과 저장
+                    save_report_to_db(current_week_info, result.content)
                     
-                    st.success(f"✅ [{selected_week}] 리포트가 성공적으로 DB에 주입되었습니다!")
+                    st.success("✅ 리포트가 성공적으로 생성 및 데이터베이스에 저장되었습니다!")
                     
-                    # 생성된 리포트 출력
+                    # 메인 화면에 생성된 리포트 출력 (PDF 스타일 CSS 적용)
                     st.markdown(f'<div class="report-container">', unsafe_allow_html=True)
                     st.markdown(result.content)
                     st.markdown('</div>', unsafe_allow_html=True)
                     
-                    # 출처 링크 표시
+                    # 출처 링크 표시 (깔끔하게 하단 분리)
                     st.markdown("### 🔗 Reference (분석 참조 기사)")
                     for i, news in enumerate(combined_news):
                         url = news.get('url', '#') if isinstance(news, dict) else getattr(news, 'url', '#')
@@ -174,16 +180,16 @@ with right_col:
     st.markdown("### 🗄️ Past Reports Archive")
     st.caption("SQLite DB에 저장된 과거 브리프 기록입니다.")
     
-    # 렌더링될 때 DB에서 실시간으로 읽어옴
     history_df = load_history()
     
     if history_df.empty:
-        st.info("아직 저장된 과거 리포트가 없습니다. 좌측에서 9월 1주차부터 차례대로 생성해 보세요!")
+        st.info("아직 저장된 과거 리포트가 없습니다. 리포트를 생성해 보세요!")
     else:
-        # DB에 저장된 생성일(가짜 과거 시간) 기준으로 내림차순 정렬되어 출력됨
         for idx, row in history_df.iterrows():
+            # 아코디언 메뉴로 과거 기록 렌더링
             with st.expander(f"📄 {row['week_title']} 브리프"):
-                st.caption(f"생성일시: {str(row['created_at'])[:16]}")
+                st.caption(f"생성일시: {row['created_at'][:16]}")
                 st.markdown(f'<div class="history-box">', unsafe_allow_html=True)
+                # 내용이 너무 길면 요약해서 보여주기 (옵션)
                 st.markdown(row['content'])
                 st.markdown('</div>', unsafe_allow_html=True)
